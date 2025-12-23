@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+requests
+sentence-transformers
+faiss-cpu
+tqdm
+groq
