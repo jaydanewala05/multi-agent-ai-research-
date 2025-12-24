@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -23,7 +23,7 @@ from ocr_utils import extract_text_from_image, analyze_image_content
 # --------------------------------------------------------
 # 1. YOUR CUSTOM UI (PASTE YOUR HTML/CSS/JS INSIDE THE TRIPLE QUOTES)
 # --------------------------------------------------------
-HTML_UI = """
+HTML_UI = r"""
 <!doctype html>
 <html lang="en">
 <head>
@@ -150,7 +150,7 @@ pre::before{
 pre:hover{border-color:rgba(0,255,255,0.2)}
 
 /* Scrollbar styling */
-pre::-webkit-scrollbar{width:8px}
+pre::-webkit-scrollbar{width=8px}
 pre::-webkit-scrollbar-track{background:rgba(0,0,0,0.2);border-radius:4px}
 pre::-webkit-scrollbar-thumb{background:var(--accent);border-radius:4px}
 pre::-webkit-scrollbar-thumb:hover{background:var(--accent3)}
@@ -194,7 +194,7 @@ pre::-webkit-scrollbar-thumb:hover{background:var(--accent3)}
   font-size:13px;line-height:1.4;position:relative;overflow:hidden;
 }
 .msg::before{
-  content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent);
+  content:"";position:absolute;top:0;left:0;width:3px;height=100%;background:var(--accent);
   opacity:0.5;
 }
 .msg.user{
@@ -207,7 +207,7 @@ pre::-webkit-scrollbar-thumb:hover{background:var(--accent3)}
 }
 
 .typing{
-  display:inline-block;height:10px;width:40px;border-radius:12px;
+  display:inline-block;height:10px;width=40px;border-radius:12px;
   background:linear-gradient(90deg,#0ff,#7b41ff);box-shadow:0 0 15px rgba(0,255,255,0.3);
   animation:pulse 1.2s infinite;
 }
@@ -265,7 +265,7 @@ pre::-webkit-scrollbar-thumb:hover{background:var(--accent3)}
 /* Fullscreen mode */
 #terminal.fullscreen{
   position:fixed!important;left:0!important;top:0!important;right:0!important;bottom:0!important;
-  width:100%!important;height:100%!important;border-radius:0!important;transform:none!important;
+  width:100%!important;height=100%!important;border-radius:0!important;transform:none!important;
 }
 
 /* Control buttons */
@@ -280,7 +280,7 @@ pre::-webkit-scrollbar-thumb:hover{background:var(--accent3)}
 
 /* Upload Popup */
 .upload-popup-overlay{
-  position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);
+  position:fixed;top:0;left:0;width:100%;height=100%;background:rgba(0,0,0,0.9);
   backdrop-filter:blur(10px);z-index:10000;display:none;justify-content:center;
   align-items:center;animation:fadeIn 0.3s ease;
 }
@@ -864,7 +864,7 @@ function handleFiles(files) {
     }
     
     // Check file type
-    if (!validTypes.includes(file.type) && !file.name.match(/\\.(pdf|png|jpg|jpeg|gif|webp|mp3|wav|m4a|ogg|txt|doc|docx|md|rtf)$/i)) {
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|png|jpg|jpeg|gif|webp|mp3|wav|m4a|ogg|txt|doc|docx|md|rtf)$/i)) {
       showUploadStatus(`File ${file.name} has unsupported format`, 'error');
       continue;
     }
@@ -1916,12 +1916,128 @@ async def execute_task_with_pdf(task_id: str, file_path: str, filename: str, tas
         if os.path.exists(file_path): os.unlink(file_path)
 
 # --------------------------------------------------------
-# API ENDPOINTS
+# API ENDPOINTS (ADDING MISSING ONES!)
 # --------------------------------------------------------
 
 @app.post("/run_research")
 async def run_research(req: ResearchRequest):
     return await run_research_pipeline(req.query, req.top_k_sources)
+
+@app.post("/chat")
+async def chat_endpoint(req: ChatRequest):
+    """Simple chat endpoint for the terminal"""
+    try:
+        # Simple response using your groq_generate function
+        prompt = f"User message: {req.message}\n\nProvide a helpful, concise response."
+        response = groq_generate(prompt, max_tokens=req.max_tokens)
+        
+        # Save to history
+        try:
+            save_history(req.message, response, "chat")
+        except:
+            pass
+            
+        return {"response": response}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/analyze_image")
+async def analyze_image_endpoint(
+    file: UploadFile = File(...),
+    task: str = Form("Describe this image")
+):
+    """Analyze image with OCR and LLM"""
+    try:
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        # Analyze image
+        result = await analyze_image_with_llm_and_ocr(tmp_path, task)
+        
+        # Clean up
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        
+        # Add some metadata
+        result["filename"] = file.filename
+        result["file_size"] = len(content)
+        result["task"] = task
+        result["timestamp"] = datetime.now().isoformat()
+        
+        # Save to history
+        try:
+            save_history(f"Image analysis: {task}", str(result), "image")
+        except:
+            pass
+            
+        return result
+        
+    except Exception as e:
+        return {"error": str(e), "message": "Image analysis failed"}
+
+@app.post("/quick_pdf_analysis")
+async def quick_pdf_analysis(
+    file: UploadFile = File(...),
+    task: str = "Analyze this document"
+):
+    """Quick PDF analysis endpoint"""
+    try:
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+        
+        # Extract text
+        text = extract_text_from_pdf(tmp_path)
+        if not text:
+            return {"error": "No text found in PDF"}
+        
+        # Simple analysis based on task
+        if "keyword" in task.lower() or "extract" in task.lower():
+            # Simple keyword extraction
+            prompt = f"Extract key keywords and terms from this document:\n\n{text[:2000]}"
+        elif "summary" in task.lower():
+            prompt = f"Provide a concise summary of this document:\n\n{text[:2000]}"
+        else:
+            prompt = f"Task: {task}\n\nDocument content:\n{text[:2000]}"
+        
+        response = groq_generate(prompt, max_tokens=500)
+        
+        # Clean up
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+        
+        result = {
+            "response": response,
+            "filename": file.filename,
+            "task": task,
+            "text_length": len(text),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Save to history
+        try:
+            save_history(f"PDF analysis: {task}", str(result), "pdf")
+        except:
+            pass
+            
+        return result
+        
+    except Exception as e:
+        return {"error": str(e), "message": "PDF analysis failed"}
+
+@app.get("/history")
+async def get_history_endpoint():
+    """Get research history"""
+    try:
+        history = get_history(limit=50)
+        return history
+    except Exception as e:
+        return {"error": str(e), "history": []}
 
 @app.post("/execute_pdf_task")
 async def execute_pdf_task(
@@ -1948,9 +2064,15 @@ async def get_task_status(task_id: str):
 async def get_task_result(task_id: str):
     return task_results.get(task_id, {"error": "Not ready"})
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 # Helper function for Image Metadata
 def get_image_metadata(image_path: str) -> Dict[str, Any]:
     try:
         with Image.open(image_path) as img:
             return {"format": img.format, "size": img.size}
-    except: return {}
+    except: 
+        return {}
