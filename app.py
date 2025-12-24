@@ -864,7 +864,7 @@ function handleFiles(files) {
     }
     
     // Check file type
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(pdf|png|jpg|jpeg|gif|webp|mp3|wav|m4a|ogg|txt|doc|docx|md|rtf)$/i)) {
+    if (!validTypes.includes(file.type) && !file.name.match(/\\.(pdf|png|jpg|jpeg|gif|webp|mp3|wav|m4a|ogg|txt|doc|docx|md|rtf)$/i)) {
       showUploadStatus(`File ${file.name} has unsupported format`, 'error');
       continue;
     }
