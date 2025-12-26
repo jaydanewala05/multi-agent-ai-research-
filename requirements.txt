@@ -10,3 +10,4 @@ pillow
 requests
 typing-extensions
 pytesseract
+pyzbar
