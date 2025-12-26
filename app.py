@@ -4,7 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import tempfile
-import os
 import fitz  # PyMuPDF
 import json
 import uuid
@@ -16,15 +15,16 @@ import requests
 import pymupdf as fitz
 import pytesseract
 import shutil
+import os
 
-# Try to find it automatically, otherwise check common Linux paths
+# Railpack usually puts tesseract here
 tesseract_path = shutil.which("tesseract") or "/usr/bin/tesseract"
 
 if os.path.exists(tesseract_path):
     pytesseract.pytesseract.tesseract_cmd = tesseract_path
     print(f"✅ Tesseract found at: {tesseract_path}")
 else:
-    print("❌ CRITICAL: Tesseract NOT found even in standard Linux paths")
+    print("❌ CRITICAL: Tesseract NOT found")
 # Import your custom modules
 from orchestrator import run_research_pipeline, run_task_with_document
 from db import init_db, save_history, get_history, save_task_result
