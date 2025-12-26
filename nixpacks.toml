@@ -1,8 +1,5 @@
 [phases.setup]
-# This tells Railway to install tesseract from the Nix package manager
-nixPkgs = ["...", "tesseract"] 
+nixPkgs = ["python3", "tesseract"]
 
 [phases.install]
-# Ensures tesseract is available during the python install phase
-dependsOn = ["setup"]
-cmds = ["pip install -r requirements.txt"]
+cmds = ["python3 -m venv /opt/venv && /opt/venv/bin/pip install -r requirements.txt"]
