@@ -13,17 +13,18 @@ import base64
 import io
 from PIL import Image
 import requests
+import pymupdf as fitz
 import pytesseract
 import shutil
-import pymupdf as fitz
-# This finds the tesseract path automatically on Railway's Linux system
-tesseract_path = shutil.which("tesseract")
 
-if tesseract_path:
+# Try to find it automatically, otherwise check common Linux paths
+tesseract_path = shutil.which("tesseract") or "/usr/bin/tesseract"
+
+if os.path.exists(tesseract_path):
     pytesseract.pytesseract.tesseract_cmd = tesseract_path
+    print(f"✅ Tesseract found at: {tesseract_path}")
 else:
-    print("CRITICAL: Tesseract executable not found in PATH")
-
+    print("❌ CRITICAL: Tesseract NOT found even in standard Linux paths")
 # Import your custom modules
 from orchestrator import run_research_pipeline, run_task_with_document
 from db import init_db, save_history, get_history, save_task_result
