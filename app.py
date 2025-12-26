@@ -1987,6 +1987,15 @@ async def analyze_image_endpoint(
         
     except Exception as e:
         return {"error": str(e), "message": "Image analysis failed"}
+@app.get("/check_ocr")
+async def check_ocr():
+    import shutil
+    path = shutil.which("tesseract")
+    return {
+        "tesseract_installed": path is not None,
+        "path": path,
+        "os": os.name
+    }    
 
 @app.post("/quick_pdf_analysis")
 async def quick_pdf_analysis(
