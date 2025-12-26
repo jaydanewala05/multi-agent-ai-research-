@@ -13,6 +13,16 @@ import base64
 import io
 from PIL import Image
 import requests
+import pytesseract
+import shutil
+
+# This finds the tesseract path automatically on Railway's Linux system
+tesseract_path = shutil.which("tesseract")
+
+if tesseract_path:
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
+else:
+    print("CRITICAL: Tesseract executable not found in PATH")
 
 # Import your custom modules
 from orchestrator import run_research_pipeline, run_task_with_document
