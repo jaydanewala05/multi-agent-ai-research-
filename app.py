@@ -15,7 +15,7 @@ from PIL import Image
 import requests
 import pytesseract
 import shutil
-
+import pymupdf as fitz
 # This finds the tesseract path automatically on Railway's Linux system
 tesseract_path = shutil.which("tesseract")
 
