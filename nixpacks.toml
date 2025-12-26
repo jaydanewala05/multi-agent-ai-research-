@@ -1,0 +1,5 @@
+[variables]
+    NIXPACKS_PKGS = "tesseract"
+
+[phases.setup]
+    nixPkgs = ["...", "tesseract"]
