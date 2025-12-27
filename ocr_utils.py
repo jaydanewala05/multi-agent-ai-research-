@@ -1,6 +1,15 @@
 import cv2
 import numpy as np
 from PIL import Image
+import pytesseract
+from PIL import Image
+import os
+import shutil
+
+# Ensure this function name is EXACTLY as written below
+def extract_text_from_image(image_path: str) -> str:
+    """Extract text from image using OCR"""
+    # ... rest of your code ...
 
 def preprocess_image(image_path):
     # Load image with OpenCV
