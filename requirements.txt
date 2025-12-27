@@ -11,3 +11,4 @@ requests
 typing-extensions
 pytesseract
 pyzbar
+opencv-python-headless
